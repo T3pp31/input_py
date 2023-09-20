@@ -1,3 +1,5 @@
+use input_py::input::input;
 fn main() {
-    println!("Hello, world!");
+    let comment = "test";
+    let input_data = input(&comment);
 }
