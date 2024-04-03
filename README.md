@@ -9,3 +9,8 @@ fn main() {
     let input_data = input(&comment);
 }
 ```
+
+in terminal
+test:
+
+you can input above
