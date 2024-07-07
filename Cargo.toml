@@ -1,6 +1,6 @@
 [package]
 name = "input_py"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 description = "you can use input like python3"
 license = "MIT"
