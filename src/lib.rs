@@ -1,6 +1,18 @@
+use std::io::{self, Write};
+
+
 /// # input_py
 ///
 /// you can use input like python3
+///
+/// # Args:
+/// * comment: &str - display text in terminal
+/// if set comment like "test" display like
+///
+/// test:
+///
+/// # Returns:
+/// Result<String, String>
 ///
 /// # usage
 /// ```
@@ -10,8 +22,6 @@
 ///     let input_data = input(&comment);
 /// }
 /// ```
-
-use std::io::{self, Write};
 pub fn input(comment: &str) -> Result<String, String> {
     let mut buf = String::new();
     print!("{}:", comment);
