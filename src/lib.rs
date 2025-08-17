@@ -1,36 +1,147 @@
 use std::io::{self, Write};
 
+/// Errors that can occur during input operations
+#[derive(Debug)]
+pub enum InputError {
+    /// Failed to flush stdout
+    FlushError(io::Error),
+    /// Failed to read from stdin
+    ReadError(io::Error),
+}
 
-/// # input_py
+impl std::fmt::Display for InputError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InputError::FlushError(e) => write!(f, "Failed to flush stdout: {e}"),
+            InputError::ReadError(e) => write!(f, "Failed to read from stdin: {e}"),
+        }
+    }
+}
+
+impl std::error::Error for InputError {}
+
+/// Reads a line of input from stdin with a prompt, similar to Python's input() function.
 ///
-/// you can use input like python3
+/// # Arguments
+/// * `comment` - The prompt text to display before the colon. If empty, no prompt is shown.
 ///
-/// # Args:
-/// * comment: &str - display text in terminal
-/// if set comment like "test" display like
+/// # Returns
+/// * `Ok(String)` - The input string with leading/trailing whitespace removed
+/// * `Err(InputError)` - An error if stdout flush or stdin read fails
 ///
-/// test:
-///
-/// # Returns:
-/// Result<String, String>
-///
-/// # usage
+/// # Examples
 /// ```
 /// use input_py::input;
-/// fn main() {
-///     let comment = "test";
-///     let input_data = input(&comment);
+/// 
+/// // Basic usage with prompt
+/// match input("Enter your name") {
+///     Ok(name) => println!("Hello, {}!", name),
+///     Err(e) => eprintln!("Error: {}", e),
+/// }
+/// 
+/// // Empty prompt
+/// match input("") {
+///     Ok(data) => println!("You entered: {}", data),
+///     Err(e) => eprintln!("Error: {}", e),
 /// }
 /// ```
-pub fn input(comment: &str) -> Result<String, String> {
+pub fn input(comment: &str) -> Result<String, InputError> {
     let mut buf = String::new();
-    print!("{}:", comment);
-    io::stdout().flush().expect("Failed to flush stdout");
+    
+    if !comment.is_empty() {
+        print!("{comment}:");
+        io::stdout().flush().map_err(InputError::FlushError)?;
+    }
 
-    if io::stdin().read_line(&mut buf).is_ok() {
-        let trimmed = buf.trim().to_string();
-        Ok(trimmed)
+    io::stdin().read_line(&mut buf).map_err(InputError::ReadError)?;
+    Ok(buf.trim().to_string())
+}
+
+/// Reads a line of input with a default value if nothing is entered.
+///
+/// # Arguments
+/// * `comment` - The prompt text to display
+/// * `default` - The default value to return if the user enters nothing
+///
+/// # Returns
+/// * `Ok(String)` - The input string or default value
+/// * `Err(InputError)` - An error if stdout flush or stdin read fails
+///
+/// # Examples
+/// ```
+/// use input_py::input_with_default;
+/// 
+/// match input_with_default("Enter port", "8080") {
+///     Ok(port) => println!("Using port: {}", port),
+///     Err(e) => eprintln!("Error: {}", e),
+/// }
+/// ```
+pub fn input_with_default(comment: &str, default: &str) -> Result<String, InputError> {
+    let mut buf = String::new();
+    
+    if default.is_empty() {
+        print!("{comment}:");
     } else {
-        Err("Failed to read input".to_string())
+        print!("{comment} [{default}]:");
+    }
+    io::stdout().flush().map_err(InputError::FlushError)?;
+
+    io::stdin().read_line(&mut buf).map_err(InputError::ReadError)?;
+    let trimmed = buf.trim();
+    
+    if trimmed.is_empty() {
+        Ok(default.to_string())
+    } else {
+        Ok(trimmed.to_string())
+    }
+}
+
+/// Reads a line of input with configurable trimming behavior.
+///
+/// # Arguments
+/// * `comment` - The prompt text to display
+/// * `trim_whitespace` - Whether to trim leading/trailing whitespace
+///
+/// # Returns
+/// * `Ok(String)` - The input string (trimmed or not based on setting)
+/// * `Err(InputError)` - An error if stdout flush or stdin read fails
+///
+/// # Examples
+/// ```
+/// use input_py::input_trim;
+/// 
+/// // Preserve whitespace
+/// match input_trim("Enter text", false) {
+///     Ok(text) => println!("Raw input: '{}'", text),
+///     Err(e) => eprintln!("Error: {}", e),
+/// }
+/// 
+/// // Trim whitespace (default behavior)
+/// match input_trim("Enter text", true) {
+///     Ok(text) => println!("Trimmed input: '{}'", text),
+///     Err(e) => eprintln!("Error: {}", e),
+/// }
+/// ```
+pub fn input_trim(comment: &str, trim_whitespace: bool) -> Result<String, InputError> {
+    let mut buf = String::new();
+    
+    if !comment.is_empty() {
+        print!("{comment}:");
+        io::stdout().flush().map_err(InputError::FlushError)?;
+    }
+
+    io::stdin().read_line(&mut buf).map_err(InputError::ReadError)?;
+    
+    if trim_whitespace {
+        Ok(buf.trim().to_string())
+    } else {
+        // Remove only the trailing newline
+        if buf.ends_with('\n') {
+            buf.pop();
+            if buf.ends_with('\r') {
+                buf.pop();
+            }
+        }
+        Ok(buf)
     }
 }
