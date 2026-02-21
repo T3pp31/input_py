@@ -1,5 +1,5 @@
-/// Configuration constants for the input_py library and demo application.
-/// All hardcoded values should be defined here to maintain code maintainability.
+//! Configuration constants for the input_py library and demo application.
+//! All hardcoded values should be defined here to maintain code maintainability.
 
 /// Demo application configuration
 pub mod demo {
