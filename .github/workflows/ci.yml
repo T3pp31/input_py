@@ -37,6 +37,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ matrix.rust }}-cargo-
 
+      - name: Regenerate Cargo.lock for MSRV compatibility
+        if: matrix.rust != 'stable'
+        run: cargo generate-lockfile
+
       - name: Run tests
         run: cargo test --verbose
 
