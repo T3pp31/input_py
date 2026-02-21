@@ -5,6 +5,8 @@ pub mod config;
 /// Errors that can occur during input operations
 #[derive(Debug)]
 pub enum InputError {
+    /// Failed to write to stdout
+    WriteError(io::Error),
     /// Failed to flush stdout
     FlushError(io::Error),
     /// Failed to read from stdin
@@ -14,6 +16,9 @@ pub enum InputError {
 impl std::fmt::Display for InputError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            InputError::WriteError(e) => {
+                write!(f, "{}: {e}", config::errors::WRITE_ERROR_PREFIX)
+            }
             InputError::FlushError(e) => {
                 write!(f, "{}: {e}", config::errors::FLUSH_ERROR_PREFIX)
             }
@@ -24,7 +29,15 @@ impl std::fmt::Display for InputError {
     }
 }
 
-impl std::error::Error for InputError {}
+impl std::error::Error for InputError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            InputError::WriteError(e) => Some(e),
+            InputError::FlushError(e) => Some(e),
+            InputError::ReadError(e) => Some(e),
+        }
+    }
+}
 
 /// Trait for abstracting input operations (enables testing)
 pub trait InputReader {
@@ -51,8 +64,7 @@ pub struct StdoutWriter;
 
 impl OutputWriter for StdoutWriter {
     fn write_str(&mut self, s: &str) -> io::Result<()> {
-        print!("{}", s);
-        Ok(())
+        write!(io::stdout(), "{}", s)
     }
 
     fn flush(&mut self) -> io::Result<()> {
@@ -133,7 +145,7 @@ pub fn read_input_with_io<R: InputReader, W: OutputWriter>(
         };
         writer
             .write_str(&prompt_text)
-            .map_err(InputError::FlushError)?;
+            .map_err(InputError::WriteError)?;
         writer.flush().map_err(InputError::FlushError)?;
     }
 
@@ -142,7 +154,7 @@ pub fn read_input_with_io<R: InputReader, W: OutputWriter>(
     reader.read_line(&mut buf).map_err(InputError::ReadError)?;
 
     // Process the input based on options
-    process_input(buf, default_value, trim_whitespace)
+    Ok(process_input(buf, default_value, trim_whitespace))
 }
 
 /// Process input string based on options
@@ -151,15 +163,15 @@ pub fn process_input(
     mut input: String,
     default_value: Option<&str>,
     trim_whitespace: bool,
-) -> Result<String, InputError> {
+) -> String {
     if trim_whitespace {
         let trimmed = input.trim();
         if trimmed.is_empty() {
             if let Some(default) = default_value {
-                return Ok(default.to_string());
+                return default.to_string();
             }
         }
-        Ok(trimmed.to_string())
+        trimmed.to_string()
     } else {
         // Remove only the trailing newline characters
         if input.ends_with('\n') {
@@ -168,7 +180,99 @@ pub fn process_input(
                 input.pop();
             }
         }
-        Ok(input)
+        // Apply default value when input is empty even with trim disabled
+        if input.is_empty() {
+            if let Some(default) = default_value {
+                return default.to_string();
+            }
+        }
+        input
+    }
+}
+
+/// Builder for configuring and reading user input
+///
+/// Provides a fluent API for combining options like default values,
+/// trimming behavior, and prompt visibility.
+///
+/// # Examples
+/// ```no_run
+/// use input_py::Input;
+///
+/// // Basic usage
+/// let name = Input::new("Enter your name").read().unwrap();
+///
+/// // With default value and no trimming
+/// let port = Input::new("Enter port")
+///     .default("8080")
+///     .trim(false)
+///     .read()
+///     .unwrap();
+/// ```
+pub struct Input<'a> {
+    prompt: &'a str,
+    default_value: Option<&'a str>,
+    trim_whitespace: bool,
+    show_prompt: bool,
+}
+
+impl<'a> Input<'a> {
+    /// Create a new Input builder with the given prompt text.
+    /// If the prompt is empty, the prompt will not be displayed.
+    pub fn new(prompt: &'a str) -> Self {
+        Self {
+            prompt,
+            default_value: None,
+            trim_whitespace: true,
+            show_prompt: !prompt.is_empty(),
+        }
+    }
+
+    /// Set a default value to return when the user enters nothing.
+    pub fn default(mut self, value: &'a str) -> Self {
+        self.default_value = Some(value);
+        self
+    }
+
+    /// Control whether leading/trailing whitespace is trimmed.
+    /// Defaults to `true`.
+    pub fn trim(mut self, trim: bool) -> Self {
+        self.trim_whitespace = trim;
+        self
+    }
+
+    /// Control whether the prompt is displayed.
+    /// Defaults to `true` when the prompt is non-empty.
+    pub fn show_prompt(mut self, show: bool) -> Self {
+        self.show_prompt = show;
+        self
+    }
+
+    /// Read input from standard stdin/stdout.
+    pub fn read(self) -> Result<String, InputError> {
+        read_input_internal(
+            self.prompt,
+            self.default_value,
+            self.trim_whitespace,
+            self.show_prompt,
+        )
+    }
+
+    /// Read input using custom reader/writer implementations.
+    /// Useful for testing without actual I/O.
+    pub fn read_with_io<R: InputReader, W: OutputWriter>(
+        self,
+        reader: &mut R,
+        writer: &mut W,
+    ) -> Result<String, InputError> {
+        read_input_with_io(
+            self.prompt,
+            self.default_value,
+            self.trim_whitespace,
+            self.show_prompt,
+            reader,
+            writer,
+        )
     }
 }
 
@@ -199,10 +303,10 @@ fn read_input_internal(
 ///
 /// # Returns
 /// * `Ok(String)` - The input string with leading/trailing whitespace removed
-/// * `Err(InputError)` - An error if stdout flush or stdin read fails
+/// * `Err(InputError)` - An error if stdout write/flush or stdin read fails
 ///
 /// # Examples
-/// ```
+/// ```no_run
 /// use input_py::input;
 ///
 /// // Basic usage with prompt
@@ -218,7 +322,7 @@ fn read_input_internal(
 /// }
 /// ```
 pub fn input(comment: &str) -> Result<String, InputError> {
-    read_input_internal(comment, None, true, !comment.is_empty())
+    Input::new(comment).read()
 }
 
 /// Reads a line of input with a default value if nothing is entered.
@@ -229,10 +333,10 @@ pub fn input(comment: &str) -> Result<String, InputError> {
 ///
 /// # Returns
 /// * `Ok(String)` - The input string or default value
-/// * `Err(InputError)` - An error if stdout flush or stdin read fails
+/// * `Err(InputError)` - An error if stdout write/flush or stdin read fails
 ///
 /// # Examples
-/// ```
+/// ```no_run
 /// use input_py::input_with_default;
 ///
 /// match input_with_default("Enter port", "8080") {
@@ -241,7 +345,7 @@ pub fn input(comment: &str) -> Result<String, InputError> {
 /// }
 /// ```
 pub fn input_with_default(comment: &str, default: &str) -> Result<String, InputError> {
-    read_input_internal(comment, Some(default), true, true)
+    Input::new(comment).default(default).read()
 }
 
 /// Reads a line of input with configurable trimming behavior.
@@ -252,10 +356,10 @@ pub fn input_with_default(comment: &str, default: &str) -> Result<String, InputE
 ///
 /// # Returns
 /// * `Ok(String)` - The input string (trimmed or not based on setting)
-/// * `Err(InputError)` - An error if stdout flush or stdin read fails
+/// * `Err(InputError)` - An error if stdout write/flush or stdin read fails
 ///
 /// # Examples
-/// ```
+/// ```no_run
 /// use input_py::input_trim;
 ///
 /// // Preserve whitespace
@@ -271,5 +375,5 @@ pub fn input_with_default(comment: &str, default: &str) -> Result<String, InputE
 /// }
 /// ```
 pub fn input_trim(comment: &str, trim_whitespace: bool) -> Result<String, InputError> {
-    read_input_internal(comment, None, trim_whitespace, !comment.is_empty())
+    Input::new(comment).trim(trim_whitespace).read()
 }

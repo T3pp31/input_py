@@ -1,5 +1,5 @@
 use input_py::config::demo::{messages, prompts, DEFAULT_PORT, TITLE};
-use input_py::{input, input_trim, input_with_default};
+use input_py::{input, input_trim, input_with_default, Input};
 
 fn main() {
     println!("{}\n", TITLE);
@@ -56,6 +56,20 @@ fn main() {
         Ok(data) => println!("You entered: '{data}'"),
         Err(e) => {
             eprintln!("Error reading input: {e}");
+            return;
+        }
+    }
+
+    // Builder pattern example: default + no trim
+    println!("\n6. Builder pattern example (default + no trim):");
+    match Input::new(prompts::PORT)
+        .default(DEFAULT_PORT)
+        .trim(false)
+        .read()
+    {
+        Ok(port) => println!("Port (raw): '{port}'"),
+        Err(e) => {
+            eprintln!("Error reading port: {e}");
             return;
         }
     }

@@ -38,6 +38,7 @@ fn test_format_constants_exist() {
 #[test]
 fn test_error_prefix_constants_exist() {
     // Given/When/Then: Error prefix constants should be accessible
+    assert!(!config::errors::WRITE_ERROR_PREFIX.is_empty());
     assert!(!config::errors::FLUSH_ERROR_PREFIX.is_empty());
     assert!(!config::errors::READ_ERROR_PREFIX.is_empty());
 }

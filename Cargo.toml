@@ -1,9 +1,13 @@
 [package]
 name = "input_py"
-version = "1.0.3"
+version = "2.0.0"
 edition = "2021"
 description = "you can use input like python3"
 license = "MIT"
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+readme = "README.md"
+repository = "https://github.com/T3pp31/input_py"
+keywords = ["input", "stdin", "python", "cli", "terminal"]
+categories = ["command-line-interface"]
+rust-version = "1.70.0"
 
 [dependencies]

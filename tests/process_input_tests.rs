@@ -13,8 +13,7 @@ fn test_normal_input_with_trim() {
     let result = process_input(input, None, true);
 
     // Then: Whitespace should be trimmed
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "hello");
+    assert_eq!(result, "hello");
 }
 
 #[test]
@@ -26,8 +25,7 @@ fn test_input_with_surrounding_whitespace_trim_enabled() {
     let result = process_input(input, None, true);
 
     // Then: All surrounding whitespace should be removed
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "hello world");
+    assert_eq!(result, "hello world");
 }
 
 #[test]
@@ -39,8 +37,7 @@ fn test_input_with_surrounding_whitespace_trim_disabled() {
     let result = process_input(input, None, false);
 
     // Then: Only trailing newline should be removed
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "  hello world  ");
+    assert_eq!(result, "  hello world  ");
 }
 
 #[test]
@@ -53,8 +50,7 @@ fn test_empty_input_with_default() {
     let result = process_input(input, Some(default), true);
 
     // Then: Default value should be returned
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "default_value");
+    assert_eq!(result, "default_value");
 }
 
 #[test]
@@ -67,8 +63,7 @@ fn test_whitespace_only_input_with_default() {
     let result = process_input(input, Some(default), true);
 
     // Then: Default value should be returned
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "fallback");
+    assert_eq!(result, "fallback");
 }
 
 #[test]
@@ -80,8 +75,7 @@ fn test_empty_input_without_default() {
     let result = process_input(input, None, true);
 
     // Then: Empty string should be returned
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "");
+    assert_eq!(result, "");
 }
 
 #[test]
@@ -93,8 +87,7 @@ fn test_crlf_newline_handling() {
     let result = process_input(input, None, false);
 
     // Then: Both CR and LF should be removed
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "test");
+    assert_eq!(result, "test");
 }
 
 #[test]
@@ -106,8 +99,7 @@ fn test_input_without_newline() {
     let result = process_input(input, None, false);
 
     // Then: String should remain unchanged
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "no newline");
+    assert_eq!(result, "no newline");
 }
 
 #[test]
@@ -119,8 +111,7 @@ fn test_japanese_input() {
     let result = process_input(input, None, true);
 
     // Then: Japanese characters should be preserved
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "こんにちは");
+    assert_eq!(result, "こんにちは");
 }
 
 #[test]
@@ -132,8 +123,7 @@ fn test_completely_empty_input() {
     let result = process_input(input, None, true);
 
     // Then: Empty string should be returned
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "");
+    assert_eq!(result, "");
 }
 
 #[test]
@@ -146,8 +136,7 @@ fn test_user_input_overrides_default() {
     let result = process_input(input, Some(default), true);
 
     // Then: User input should override default
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "user_value");
+    assert_eq!(result, "user_value");
 }
 
 #[test]
@@ -160,8 +149,7 @@ fn test_empty_default_value() {
     let result = process_input(input, Some(default), true);
 
     // Then: Empty default should be returned
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "");
+    assert_eq!(result, "");
 }
 
 #[test]
@@ -173,8 +161,7 @@ fn test_tabs_and_spaces_mixed() {
     let result = process_input(input, None, true);
 
     // Then: All whitespace should be trimmed
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "hello");
+    assert_eq!(result, "hello");
 }
 
 #[test]
@@ -186,8 +173,7 @@ fn test_only_newline_trim_disabled() {
     let result = process_input(input, None, false);
 
     // Then: Empty string after newline removal
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "");
+    assert_eq!(result, "");
 }
 
 #[test]
@@ -199,6 +185,61 @@ fn test_special_characters() {
     let result = process_input(input, None, true);
 
     // Then: Special characters should be preserved
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "hello@world#123$%");
+    assert_eq!(result, "hello@world#123$%");
+}
+
+// ==========================================================
+// Tests for trim_disabled + default_value (Issue #3 fix)
+// ==========================================================
+
+#[test]
+fn test_trim_disabled_with_default_empty_input() {
+    // Given: Empty input (just newline) with default value and trim disabled
+    let input = "\n".to_string();
+    let default = "fallback";
+
+    // When: Processing with trim disabled
+    let result = process_input(input, Some(default), false);
+
+    // Then: Default value should be returned even with trim disabled
+    assert_eq!(result, "fallback");
+}
+
+#[test]
+fn test_trim_disabled_with_default_nonempty_input() {
+    // Given: Non-empty input with default value and trim disabled
+    let input = "user_value\n".to_string();
+    let default = "fallback";
+
+    // When: Processing with trim disabled
+    let result = process_input(input, Some(default), false);
+
+    // Then: User input should override default
+    assert_eq!(result, "user_value");
+}
+
+#[test]
+fn test_trim_disabled_with_default_whitespace_input() {
+    // Given: Whitespace-only input with default value and trim disabled
+    let input = "   \n".to_string();
+    let default = "fallback";
+
+    // When: Processing with trim disabled
+    let result = process_input(input, Some(default), false);
+
+    // Then: Whitespace should be preserved (not empty, so no default)
+    assert_eq!(result, "   ");
+}
+
+#[test]
+fn test_trim_disabled_with_default_completely_empty() {
+    // Given: Completely empty string with default value and trim disabled
+    let input = "".to_string();
+    let default = "fallback";
+
+    // When: Processing with trim disabled
+    let result = process_input(input, Some(default), false);
+
+    // Then: Default value should be returned for truly empty input
+    assert_eq!(result, "fallback");
 }

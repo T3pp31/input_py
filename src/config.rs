@@ -27,14 +27,13 @@ pub mod demo {
 
 /// Format strings used in prompts
 pub mod format {
-    /// Prompt suffix with default value placeholder: " [{default}]:"
-    pub const PROMPT_WITH_DEFAULT_SUFFIX: &str = "]:";
     /// Prompt suffix without default value: ":"
     pub const PROMPT_SUFFIX: &str = ":";
 }
 
 /// Error message prefixes
 pub mod errors {
+    pub const WRITE_ERROR_PREFIX: &str = "Failed to write to stdout";
     pub const FLUSH_ERROR_PREFIX: &str = "Failed to flush stdout";
     pub const READ_ERROR_PREFIX: &str = "Failed to read from stdin";
 }
