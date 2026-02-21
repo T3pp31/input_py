@@ -130,11 +130,11 @@ fn test_write_error_handling() {
     // When: Attempting to write prompt
     let result = read_input_with_io("Prompt", None, true, true, &mut reader, &mut writer);
 
-    // Then: FlushError should be returned
+    // Then: WriteError should be returned
     assert!(result.is_err());
     match result.unwrap_err() {
-        InputError::FlushError(_) => {} // Expected
-        _ => panic!("Expected FlushError"),
+        InputError::WriteError(_) => {} // Expected
+        _ => panic!("Expected WriteError"),
     }
 }
 

@@ -8,12 +8,13 @@
 
 ## Features
 
-- 🐍 **Python-like syntax**: Familiar `input()` function similar to Python
-- 🛡️ **Robust error handling**: Proper error types instead of panics
-- 🎯 **Default values**: Support for default values when no input is provided
-- ✂️ **Configurable trimming**: Control whitespace handling behavior
-- 📝 **Rich documentation**: Comprehensive examples and documentation
-- ✅ **Well tested**: Extensive test suite with 14+ tests
+- Python-like syntax: Familiar `input()` function similar to Python
+- Robust error handling: Proper error types instead of panics
+- Default values: Support for default values when no input is provided
+- Configurable trimming: Control whitespace handling behavior
+- Builder pattern: Flexible `Input` builder for combining options
+- Rich documentation: Comprehensive examples and documentation
+- Well tested: Extensive test suite with 70+ tests
 
 ## Installation
 
@@ -21,7 +22,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-input_py = "1.0.0"
+input_py = "2.0.0"
 ```
 
 ## Quick Start
@@ -92,6 +93,26 @@ let clean_text = input_trim("Enter text", true)?;
 println!("Clean: '{}'", clean_text);
 ```
 
+### `Input` Builder (new in v2.0.0)
+
+A fluent builder API for combining options like default values, trimming, and prompt visibility.
+
+```rust
+use input_py::Input;
+
+// Default value + no trimming (not possible with convenience functions alone)
+let port = Input::new("Enter port")
+    .default("8080")
+    .trim(false)
+    .read()?;
+println!("Port: '{}'", port);
+
+// Hide prompt
+let secret = Input::new("Password")
+    .show_prompt(false)
+    .read()?;
+```
+
 ## Error Handling
 
 All functions return `Result<String, InputError>` for robust error handling:
@@ -107,6 +128,9 @@ match input("Enter something") {
             println!("You entered: {}", value);
         }
     }
+    Err(InputError::WriteError(e)) => {
+        eprintln!("Failed to write to stdout: {}", e);
+    }
     Err(InputError::FlushError(e)) => {
         eprintln!("Failed to flush stdout: {}", e);
     }
@@ -119,7 +143,7 @@ match input("Enter something") {
 ## Complete Example
 
 ```rust
-use input_py::{input, input_with_default, input_trim};
+use input_py::{input, input_with_default, input_trim, Input};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== User Registration ===");
@@ -137,10 +161,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Preserve formatting for addresses
     let address = input_trim("Address (with spacing)", false)?;
 
+    // Builder: default + no trimming
+    let city = Input::new("City")
+        .default("Tokyo")
+        .trim(false)
+        .read()?;
+
     println!("\n--- Registration Complete ---");
     println!("Name: {}", name);
     println!("Age: {}", age);
     println!("Address: '{}'", address);
+    println!("City: '{}'", city);
 
     Ok(())
 }
@@ -156,10 +187,12 @@ cargo test
 
 The library includes comprehensive tests covering:
 
-- ✅ Normal input scenarios
-- ❌ Error conditions
-- 🔧 Internal logic verification
-- 🎯 Edge cases and special characters
+- Normal input scenarios
+- Error conditions (WriteError, FlushError, ReadError)
+- Internal logic verification
+- Edge cases and special characters
+- Builder pattern combinations
+- Japanese input support
 
 ## License
 
@@ -171,15 +204,46 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Changelog
 
-### v1.0.0 🎉
-- 🚀 **Stable release** - Ready for production use
-- ✨ Added `input_with_default()` function for default value support
-- ✨ Added `input_trim()` function for configurable whitespace handling
-- 🛡️ Improved error handling with custom `InputError` type (breaking change)
-- 📚 Enhanced documentation with comprehensive examples and API reference
-- ✅ Added extensive test suite (14+ tests) with full coverage
-- 🔧 Fixed clippy warnings for better code quality
-- 📖 Complete README with examples, comparison table, and usage guide
+### v2.0.0
+
+**Breaking Changes:**
+- `process_input()` now returns `String` instead of `Result<String, InputError>`
+- Added `InputError::WriteError` variant (existing `match` on `InputError` may need updating)
+
+**New Features:**
+- Added `Input` builder pattern for combining options (default + trim + show_prompt)
+- `InputError` now implements `source()` for proper error chaining
+
+**Bug Fixes:**
+- Fixed `StdoutWriter::write_str` silently ignoring write errors
+- Fixed write errors being incorrectly reported as `FlushError`
+- Fixed `process_input` ignoring `default_value` when `trim_whitespace=false`
+
+**Improvements:**
+- Added `WriteError` variant to `InputError` for proper error categorization
+- Removed unused `PROMPT_WITH_DEFAULT_SUFFIX` constant
+- Added Cargo.toml metadata (repository, keywords, categories, rust-version)
+- Added MSRV testing (Rust 1.70.0) and security audit to CI
+- Expanded test suite to 70+ tests
+
+### v1.0.3
+- Fixed cargo fmt and clippy CI errors
+
+### v1.0.2
+- Updated version for crates.io publish workflow
+
+### v1.0.1
+- Added GitHub Actions CI and crates.io auto-publish workflow
+- Split tests into categorized files
+- Separated config file and added I/O testable abstractions
+
+### v1.0.0
+- Stable release - Ready for production use
+- Added `input_with_default()` function for default value support
+- Added `input_trim()` function for configurable whitespace handling
+- Improved error handling with custom `InputError` type (breaking change)
+- Enhanced documentation with comprehensive examples and API reference
+- Added extensive test suite with full coverage
 
 ### v0.2.1
 - Basic input functionality similar to Python's input()
