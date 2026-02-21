@@ -139,9 +139,7 @@ pub fn read_input_with_io<R: InputReader, W: OutputWriter>(
 
     // Read input from reader
     let mut buf = String::new();
-    reader
-        .read_line(&mut buf)
-        .map_err(InputError::ReadError)?;
+    reader.read_line(&mut buf).map_err(InputError::ReadError)?;
 
     // Process the input based on options
     process_input(buf, default_value, trim_whitespace)
